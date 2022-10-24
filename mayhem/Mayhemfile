@@ -1,0 +1,6 @@
+project: circomspect
+target: circomspect-parse-fuzz
+
+cmds:
+    - cmd: ./circomspect-parse-fuzz
+      libfuzzer: true
