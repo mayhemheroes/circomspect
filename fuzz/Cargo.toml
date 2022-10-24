@@ -19,7 +19,7 @@ path = "../parser"
 members = ["."]
 
 [[bin]]
-name = "circumspect-parse-fuzz"
-path = "fuzz_targets/circumspect-parse-fuzz.rs"
+name = "circomspect-parse-fuzz"
+path = "fuzz_targets/circomspect-parse-fuzz.rs"
 test = false
 doc = false
