@@ -71,6 +71,19 @@ impl FromStr for MessageCategory {
     }
 }
 
+impl MessageCategory {
+    /// Convert message category to Sarif level.
+    pub fn to_level(&self) -> String {
+        use MessageCategory::*;
+        match self {
+            Error => "error",
+            Warning => "warning",
+            Info => "note",
+        }
+        .to_string()
+    }
+}
+
 #[derive(Clone)]
 pub struct Report {
     category: MessageCategory,
@@ -173,6 +186,10 @@ impl Report {
         .with_labels(labels);
 
         let mut notes = self.notes().clone();
+        if let Some(url) = self.code().url() {
+            // Add URL to documentation if available.
+            notes.push(format!("For more details, see {url}."));
+        }
         if verbose {
             // Add report code and note on `--allow ID`.
             notes.push(format!("To ignore this type of result, use `--allow {}`.", self.id()));

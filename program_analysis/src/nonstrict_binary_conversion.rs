@@ -2,6 +2,7 @@ use log::debug;
 use num_bigint::BigInt;
 
 use program_structure::cfg::{Cfg, DefinitionType};
+use program_structure::constants::Curve;
 use program_structure::report_code::ReportCode;
 use program_structure::report::{Report, ReportCollection};
 use program_structure::file_definition::{FileID, FileLocation};
@@ -66,6 +67,10 @@ pub fn find_nonstrict_binary_conversion(cfg: &Cfg) -> ReportCollection {
         // Exit early if this is a function or custom template.
         return ReportCollection::new();
     }
+    if cfg.constants().curve() != &Curve::Bn128 {
+        // Exit early if we're not using the default curve.
+        return ReportCollection::new();
+    }
     debug!("running non-strict `Num2Bits` analysis pass");
     let mut reports = ReportCollection::new();
     let prime_size = BigInt::from(cfg.constants().prime_size());
@@ -83,41 +88,40 @@ fn visit_statement(stmt: &Statement, prime_size: &BigInt, reports: &mut ReportCo
     use Expression::*;
     use Statement::*;
     use ValueReduction::*;
-    // A component initialization on the form `var = component_name(args, ...)`.
-    if let Substitution {
-        meta: var_meta,
-        op: AssignLocalOrComponent,
-        rhe: Call { meta: component_meta, name: component_name, args },
-        ..
-    } = stmt
-    {
+    if let Substitution { meta: var_meta, op: AssignLocalOrComponent, rhe, .. } = stmt {
         // If the variable `var` is declared as a local variable or signal, we exit early.
         if var_meta.type_knowledge().is_local() || var_meta.type_knowledge().is_signal() {
             return;
         }
-        // We assume this is the `Num2Bits` circuit from Circomlib.
-        if component_name == "Num2Bits" && args.len() == 1 {
-            let arg = &args[0];
-            // If the input size is known to be less than the prime size, this
-            // initialization is safe.
-            if let Some(FieldElement { value }) = arg.value() {
-                if value < prime_size {
-                    return;
+        // If this is an update node, we extract the right-hand side.
+        let rhe = if let Update { rhe, .. } = rhe { rhe } else { rhe };
+
+        // A component initialization on the form `var = component_name(args, ...)`.
+        if let Call { meta: component_meta, name: component_name, args } = rhe {
+            // We assume this is the `Num2Bits` circuit from Circomlib.
+            if component_name == "Num2Bits" && args.len() == 1 {
+                let arg = &args[0];
+                // If the input size is known to be less than the prime size, this
+                // initialization is safe.
+                if let Some(FieldElement { value }) = arg.value() {
+                    if value < prime_size {
+                        return;
+                    }
                 }
+                reports.push(build_num2bits(component_meta));
             }
-            reports.push(build_num2bits(component_meta));
-        }
-        // We assume this is the `Bits2Num` circuit from Circomlib.
-        if component_name == "Bits2Num" && args.len() == 1 {
-            let arg = &args[0];
-            // If the input size is known to be less than the prime size, this
-            // initialization is safe.
-            if let Some(FieldElement { value }) = arg.value() {
-                if value < prime_size {
-                    return;
+            // We assume this is the `Bits2Num` circuit from Circomlib.
+            if component_name == "Bits2Num" && args.len() == 1 {
+                let arg = &args[0];
+                // If the input size is known to be less than the prime size, this
+                // initialization is safe.
+                if let Some(FieldElement { value }) = arg.value() {
+                    if value < prime_size {
+                        return;
+                    }
                 }
+                reports.push(build_bits2num(component_meta));
             }
-            reports.push(build_bits2num(component_meta));
         }
     }
 }

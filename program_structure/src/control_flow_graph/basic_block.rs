@@ -17,6 +17,7 @@ type IndexSet = HashSet<Index>;
 pub struct BasicBlock {
     index: Index,
     meta: Meta,
+    loop_depth: usize,
     stmts: Vec<Statement>,
     predecessors: IndexSet,
     successors: IndexSet,
@@ -24,11 +25,12 @@ pub struct BasicBlock {
 
 impl BasicBlock {
     #[must_use]
-    pub fn new(index: Index, meta: Meta) -> BasicBlock {
+    pub fn new(meta: Meta, index: Index, loop_depth: usize) -> BasicBlock {
         trace!("creating basic block {index}");
         BasicBlock {
             meta,
             index,
+            loop_depth,
             stmts: Vec::new(),
             predecessors: IndexSet::new(),
             successors: IndexSet::new(),
@@ -39,11 +41,12 @@ impl BasicBlock {
     pub fn from_raw_parts(
         index: Index,
         meta: Meta,
+        loop_depth: usize,
         stmts: Vec<Statement>,
         predecessors: IndexSet,
         successors: IndexSet,
     ) -> BasicBlock {
-        BasicBlock { index, meta, stmts, predecessors, successors }
+        BasicBlock { index, meta, loop_depth, stmts, predecessors, successors }
     }
 
     #[must_use]
@@ -54,6 +57,16 @@ impl BasicBlock {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    #[must_use]
+    pub fn in_loop(&self) -> bool {
+        self.loop_depth > 0
+    }
+
+    #[must_use]
+    pub fn loop_depth(&self) -> usize {
+        self.loop_depth
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &Statement> {
@@ -119,15 +132,8 @@ impl BasicBlock {
     pub fn propagate_degrees(&mut self, env: &mut DegreeEnvironment) -> bool {
         trace!("propagating degree ranges for basic block {}", self.index());
         let mut result = false;
-        let mut rerun = true;
-        while rerun {
-            // Rerun value propagation if a single child node was updated.
-            rerun = false;
-            for stmt in self.iter_mut() {
-                rerun = rerun || stmt.propagate_degrees(env);
-            }
-            // Return true if a single child node was updated.
-            result = result || rerun;
+        for stmt in self.iter_mut() {
+            result = result || stmt.propagate_degrees(env);
         }
         result
     }
@@ -135,15 +141,8 @@ impl BasicBlock {
     pub fn propagate_values(&mut self, env: &mut ValueEnvironment) -> bool {
         trace!("propagating values for basic block {}", self.index());
         let mut result = false;
-        let mut rerun = true;
-        while rerun {
-            // Rerun value propagation if a single child node was updated.
-            rerun = false;
-            for stmt in self.iter_mut() {
-                rerun = rerun || stmt.propagate_values(env);
-            }
-            // Return true if a single child node was updated.
-            result = result || rerun;
+        for stmt in self.iter_mut() {
+            result = result || stmt.propagate_values(env);
         }
         result
     }

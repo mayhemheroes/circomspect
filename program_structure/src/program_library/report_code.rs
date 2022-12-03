@@ -1,3 +1,5 @@
+const DOC_URL: &str = "https://github.com/trailofbits/circomspect/blob/main/doc/analysis_passes.md";
+
 #[derive(Copy, Clone)]
 pub enum ReportCode {
     AssertWrongType,
@@ -71,7 +73,7 @@ pub enum ReportCode {
     FieldElementComparison,
     FieldElementArithmetic,
     SignalAssignmentStatement,
-    UnecessarySignalAssignment,
+    UnnecessarySignalAssignment,
     UnusedVariableValue,
     UnusedParameterValue,
     VariableWithoutSideEffect,
@@ -79,6 +81,10 @@ pub enum ReportCode {
     NonStrictBinaryConversion,
     CyclomaticComplexity,
     TooManyArguments,
+    UnconstrainedLessThan,
+    UnconstrainedDivision,
+    BN128SpecificCircuit,
+    UnderConstrainedSignal,
 }
 
 impl ReportCode {
@@ -163,7 +169,11 @@ impl ReportCode {
             NonStrictBinaryConversion => "CS0010",
             CyclomaticComplexity => "CS0011",
             TooManyArguments => "CS0012",
-            UnecessarySignalAssignment => "CS0013",
+            UnnecessarySignalAssignment => "CS0013",
+            UnconstrainedLessThan => "CS0014",
+            UnconstrainedDivision => "CS0015",
+            BN128SpecificCircuit => "CS0016",
+            UnderConstrainedSignal => "CS0017",
         }
         .to_string()
     }
@@ -240,7 +250,7 @@ impl ReportCode {
             FieldElementComparison => "field-element-comparison",
             FieldElementArithmetic => "field-element-arithmetic",
             SignalAssignmentStatement => "signal-assignment-statement",
-            UnecessarySignalAssignment => "unecessary-signal-assignment",
+            UnnecessarySignalAssignment => "unnecessary-signal-assignment",
             UnusedVariableValue => "unused-variable-value",
             UnusedParameterValue => "unused-parameter-value",
             VariableWithoutSideEffect => "variable-without-side-effect",
@@ -248,7 +258,36 @@ impl ReportCode {
             NonStrictBinaryConversion => "non-strict-binary-conversion",
             CyclomaticComplexity => "cyclomatic-complexity",
             TooManyArguments => "too-many-arguments",
+            UnconstrainedLessThan => "unconstrained-less-than",
+            UnconstrainedDivision => "unconstrained-division",
+            BN128SpecificCircuit => "bn128-specific-circuit",
+            UnderConstrainedSignal => "under-constrained-signal",
         }
         .to_string()
+    }
+
+    pub fn url(&self) -> Option<String> {
+        use ReportCode::*;
+        match self {
+            ShadowingVariable => Some("shadowing-variable"),
+            FieldElementComparison => Some("field-element-comparison"),
+            FieldElementArithmetic => Some("field-element-arithmetic"),
+            SignalAssignmentStatement => Some("signal-assignment"),
+            UnusedVariableValue => Some("unused-variable-or-parameter"),
+            UnusedParameterValue => Some("unused-variable-or-parameter"),
+            VariableWithoutSideEffect => Some("side-effect-free-assignment"),
+            ConstantBranchCondition => Some("constant-branch-condition"),
+            NonStrictBinaryConversion => Some("non-strict-binary-conversion"),
+            CyclomaticComplexity => Some("overly-complex-function-or-template"),
+            TooManyArguments => Some("overly-complex-function-or-template"),
+            UnnecessarySignalAssignment => Some("unnecessary-signal-assignment"),
+            UnconstrainedLessThan => Some("unconstrained-less-than"),
+            UnconstrainedDivision => Some("unconstrained-devision"),
+            BN128SpecificCircuit => Some("bn128-specific-circuit"),
+            UnderConstrainedSignal => Some("under-constrained-signal"),
+            // We only provide a URL for Circomspect specific issues.
+            _ => None,
+        }
+        .map(|section| format!("{DOC_URL}#{section}"))
     }
 }

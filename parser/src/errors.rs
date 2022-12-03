@@ -9,9 +9,9 @@ pub struct UnclosedCommentError {
 }
 
 impl UnclosedCommentError {
-    pub fn produce_report(error: Self) -> Report {
-        let mut report = Report::error("Unterminated /* */.".to_string(), ReportCode::ParseFail);
-        report.add_primary(error.location, error.file_id, "Comment starts here.".to_string());
+    pub fn into_report(self) -> Report {
+        let mut report = Report::error("Unterminated comment.".to_string(), ReportCode::ParseFail);
+        report.add_primary(self.location, self.file_id, "Comment starts here.".to_string());
         report
     }
 }
@@ -19,13 +19,17 @@ impl UnclosedCommentError {
 pub struct ParsingError {
     pub location: FileLocation,
     pub file_id: FileID,
-    pub msg: String,
+    pub message: String,
 }
 
 impl ParsingError {
-    pub fn produce_report(error: Self) -> Report {
-        let mut report = Report::error(error.msg, ReportCode::ParseFail);
-        report.add_primary(error.location, error.file_id, "Invalid syntax".to_string());
+    pub fn into_report(self) -> Report {
+        let mut report = Report::error(self.message, ReportCode::ParseFail);
+        report.add_primary(
+            self.location,
+            self.file_id,
+            "This token is invalid or unexpected here.".to_string(),
+        );
         report
     }
 }
@@ -71,12 +75,12 @@ pub struct CompilerVersionError {
     pub version: Version,
 }
 impl CompilerVersionError {
-    pub fn produce_report(error: Self) -> Report {
+    pub fn into_report(self) -> Report {
         let message = format!(
-            "The file `{}` requires version {}, which is not supported by circomspect (version {}).",
-            error.path,
-            version_string(&error.required_version),
-            version_string(&error.version),
+            "The file `{}` requires version {}, which is not supported by Circomspect (version {}).",
+            self.path,
+            version_string(&self.required_version),
+            version_string(&self.version),
         );
         Report::error(message, ReportCode::CompilerVersionError)
     }
